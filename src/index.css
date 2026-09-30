@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-primary: #047857;
+    --brand-primary-hover: #065f46;
+    --brand-primary-light: #d1fae5;
+    --brand-primary-text: #065f46;
+    --brand-accent: #d97706;
+    --brand-accent-light: #fef3c7;
+    --brand-hero-from: #022c22;
+    --brand-hero-via: #064e3b;
+    --brand-hero-to: #1c1917;
+    --brand-gradient: linear-gradient(135deg, #047857 0%, #059669 100%);
+  }
+
+  [data-theme="sunlit-terracotta"] {
+    --brand-primary: #c2410c;
+    --brand-primary-hover: #9a3412;
+    --brand-primary-light: #ffedd5;
+    --brand-primary-text: #9a3412;
+    --brand-accent: #15803d;
+    --brand-accent-light: #dcfce7;
+    --brand-hero-from: #431407;
+    --brand-hero-via: #7c2d12;
+    --brand-hero-to: #1c1917;
+    --brand-gradient: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+  }
+
+  [data-theme="ocean-teal"] {
+    --brand-primary: #0f766e;
+    --brand-primary-hover: #115e59;
+    --brand-primary-light: #ccfbf1;
+    --brand-primary-text: #115e59;
+    --brand-accent: #ea580c;
+    --brand-accent-light: #ffedd5;
+    --brand-hero-from: #042f2e;
+    --brand-hero-via: #134e4a;
+    --brand-hero-to: #0f172a;
+    --brand-gradient: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  }
+
+  [data-theme="golden-harvest"] {
+    --brand-primary: #b45309;
+    --brand-primary-hover: #92400e;
+    --brand-primary-light: #fef3c7;
+    --brand-primary-text: #92400e;
+    --brand-accent: #15803d;
+    --brand-accent-light: #dcfce7;
+    --brand-hero-from: #451a03;
+    --brand-hero-via: #78350f;
+    --brand-hero-to: #18181b;
+    --brand-gradient: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  }
+
+  [data-theme="royal-forest"] {
+    --brand-primary: #1e3a8a;
+    --brand-primary-hover: #172554;
+    --brand-primary-light: #dbeafe;
+    --brand-primary-text: #1e40af;
+    --brand-accent: #10b981;
+    --brand-accent-light: #d1fae5;
+    --brand-hero-from: #0f172a;
+    --brand-hero-via: #1e293b;
+    --brand-hero-to: #022c22;
+    --brand-gradient: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  }
+}
+
+/* Reusable Dynamic Theme Classes */
+.bg-theme-primary {
+  background-color: var(--brand-primary) !important;
+}
+
+.hover\:bg-theme-primary-hover:hover {
+  background-color: var(--brand-primary-hover) !important;
+}
+
+.text-theme-primary {
+  color: var(--brand-primary) !important;
+}
+
+.border-theme-primary {
+  border-color: var(--brand-primary) !important;
+}
+
+.bg-theme-light {
+  background-color: var(--brand-primary-light) !important;
+}
+
+.text-theme-primary-text {
+  color: var(--brand-primary-text) !important;
+}
+
+.bg-theme-gradient {
+  background: var(--brand-gradient) !important;
+}

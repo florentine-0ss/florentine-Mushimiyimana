@@ -1,0 +1,6 @@
+{
+  "name": "Fofo GreenGrocer Hub",
+  "description": "Farm-to-table organic groceries delivered fresh daily across Rwanda with mobile payments, local farm sourcing, and multi-language support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
