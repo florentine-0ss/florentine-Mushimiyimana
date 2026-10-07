@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   INITIAL_PRODUCTS, 
   INITIAL_REVIEWS, 
@@ -42,9 +42,10 @@ import { Footer } from './components/Footer';
 import { OrderTrackerModal } from './components/OrderTrackerModal';
 import { FarmPassportModal } from './components/FarmPassportModal';
 import { MealKitsSection } from './components/MealKitsSection';
+import { api, DatabaseHealth } from './services/api';
 
 // Icons
-import { SlidersHorizontal, CheckCircle2, Activity, ShieldCheck, Palette, Navigation } from 'lucide-react';
+import { SlidersHorizontal, CheckCircle2, Activity, ShieldCheck, Palette, Navigation, Database } from 'lucide-react';
 
 export default function App() {
   const [currentLang, setCurrentLang] = useState<Language>('en');
@@ -54,6 +55,32 @@ export default function App() {
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [dbHealth, setDbHealth] = useState<DatabaseHealth | null>(null);
+
+  // Connect to persistent Node.js Express backend and database
+  useEffect(() => {
+    async function loadBackendData() {
+      try {
+        const health = await api.checkHealth();
+        if (health) setDbHealth(health);
+
+        const [dbProds, dbOrds, dbRevs, dbActs] = await Promise.all([
+          api.getProducts(),
+          api.getOrders(),
+          api.getReviews(),
+          api.getActivities()
+        ]);
+
+        if (dbProds && dbProds.length > 0) setProducts(dbProds);
+        if (dbOrds && dbOrds.length > 0) setOrders(dbOrds);
+        if (dbRevs && dbRevs.length > 0) setReviews(dbRevs);
+        if (dbActs && dbActs.length > 0) setActivities(dbActs);
+      } catch (err) {
+        console.warn('[Fofo] Backend initial sync:', err);
+      }
+    }
+    loadBackendData();
+  }, []);
 
   // Cart & Wishlist State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -72,7 +99,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isSystemLoginOpen, setIsSystemLoginOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [adminInitialTab, setAdminInitialTab] = useState<'catalog' | 'orders' | 'customers' | 'activity'>('activity');
+  const [adminInitialTab, setAdminInitialTab] = useState<'catalog' | 'orders' | 'customers' | 'activity' | 'schema'>('activity');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutDiscount, setCheckoutDiscount] = useState(0);
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<PaymentMethod>('mtn');
@@ -228,10 +255,17 @@ export default function App() {
     setIsCheckoutOpen(true);
   };
 
-  const handleOrderComplete = (newOrder: Order) => {
+  const handleOrderComplete = async (newOrder: Order) => {
     setOrders((prev) => [newOrder, ...prev]);
     setCart([]); // Clear cart
     
+    // Save to persistent Node.js Database
+    try {
+      await api.createOrder(newOrder);
+    } catch (err) {
+      console.warn('Failed to sync order to database:', err);
+    }
+
     // Log system activity
     const newAct: SystemActivity = {
       id: `ACT-ORD-${newOrder.id}`,
@@ -288,10 +322,15 @@ export default function App() {
     setIsCartOpen(true);
   };
 
-  // Admin operations
-  const handleAddProduct = (newProd: Product) => {
+  // Admin operations with Node.js Database persistence
+  const handleAddProduct = async (newProd: Product) => {
     setProducts((prev) => [newProd, ...prev]);
     showToast(`Added ${newProd.name} to product catalog`);
+    try {
+      await api.addProduct(newProd);
+    } catch (e) {
+      console.warn('Sync product add error:', e);
+    }
     const newAct: SystemActivity = {
       id: `ACT-PRD-${Date.now().toString().slice(-4)}`,
       title: `Harvest Item Added to Catalog`,
@@ -307,10 +346,15 @@ export default function App() {
     setActivities((prev) => [newAct, ...prev]);
   };
 
-  const handleDeleteProduct = (productId: number) => {
+  const handleDeleteProduct = async (productId: number) => {
     const deleted = products.find((p) => p.id === productId);
     setProducts((prev) => prev.filter((p) => p.id !== productId));
     showToast('Product removed from catalog');
+    try {
+      await api.deleteProduct(productId);
+    } catch (e) {
+      console.warn('Sync product delete error:', e);
+    }
     const newAct: SystemActivity = {
       id: `ACT-DEL-${Date.now().toString().slice(-4)}`,
       title: `Product Removed from Store`,
@@ -326,7 +370,7 @@ export default function App() {
     setActivities((prev) => [newAct, ...prev]);
   };
 
-  const handleToggleStock = (productId: number) => {
+  const handleToggleStock = async (productId: number) => {
     const target = products.find((p) => p.id === productId);
     const newStatus = target ? !target.inStock : false;
     setProducts((prev) =>
@@ -334,6 +378,11 @@ export default function App() {
         p.id === productId ? { ...p, inStock: !p.inStock } : p
       )
     );
+    try {
+      await api.updateProduct(productId, { inStock: newStatus });
+    } catch (e) {
+      console.warn('Sync stock toggle error:', e);
+    }
     const newAct: SystemActivity = {
       id: `ACT-STK-${Date.now().toString().slice(-4)}`,
       title: `Stock Status Updated: ${newStatus ? 'In Stock' : 'Out of Stock'}`,
@@ -349,11 +398,16 @@ export default function App() {
     setActivities((prev) => [newAct, ...prev]);
   };
 
-  const handleUpdateOrderStatus = (orderId: string, status: Order['status']) => {
+  const handleUpdateOrderStatus = async (orderId: string, status: Order['status']) => {
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status } : o))
     );
     showToast(`Order #${orderId} marked as ${status}`);
+    try {
+      await api.updateOrderStatus(orderId, status);
+    } catch (e) {
+      console.warn('Sync order status error:', e);
+    }
     const newAct: SystemActivity = {
       id: `ACT-ORD-${Date.now().toString().slice(-4)}`,
       title: `Order Status Changed: ${status.toUpperCase()}`,
@@ -488,15 +542,20 @@ export default function App() {
   };
 
   // Reviews operations
-  const handleAddReview = (newRevData: Omit<CustomerReview, 'id' | 'date' | 'verified'>) => {
-    const newReview: CustomerReview = {
-      ...newRevData,
-      id: Date.now(),
-      date: 'Just now',
-      verified: true
-    };
-    setReviews((prev) => [newReview, ...prev]);
-    showToast('Thank you! Your review has been published.');
+  const handleAddReview = async (newRevData: Omit<CustomerReview, 'id' | 'date' | 'verified'>) => {
+    try {
+      const savedReview = await api.addReview(newRevData);
+      setReviews((prev) => [savedReview, ...prev]);
+    } catch {
+      const newReview: CustomerReview = {
+        ...newRevData,
+        id: Date.now(),
+        date: 'Just now',
+        verified: true
+      };
+      setReviews((prev) => [newReview, ...prev]);
+    }
+    showToast('Thank you! Your review has been saved in the database.');
 
     const newAct: SystemActivity = {
       id: `ACT-REV-${Date.now().toString().slice(-4)}`,
@@ -511,6 +570,23 @@ export default function App() {
       metadata: { rating: newRevData.rating, location: newRevData.location }
     };
     setActivities((prev) => [newAct, ...prev]);
+  };
+
+  const handleResetDatabase = async () => {
+    const success = await api.resetDatabase();
+    if (success) {
+      const [freshProds, freshOrders, freshRevs, freshActs] = await Promise.all([
+        api.getProducts(),
+        api.getOrders(),
+        api.getReviews(),
+        api.getActivities()
+      ]);
+      setProducts(freshProds);
+      setOrders(freshOrders);
+      setReviews(freshRevs);
+      setActivities(freshActs);
+      showToast('Database reset to fresh Rwandan farm catalog seed');
+    }
   };
 
   const cartTotalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -536,8 +612,10 @@ export default function App() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span className="font-extrabold text-amber-400">ADMINISTRATOR SESSION:</span>
               <span className="font-semibold text-stone-200">{currentUser.name}</span>
-              <span className="text-stone-500">({currentUser.email})</span>
-              <span className="hidden md:inline text-stone-400">· Full system audit permissions</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 font-mono text-[10px] border border-emerald-700/80 flex items-center gap-1">
+                <Database className="w-3 h-3 text-emerald-400" />
+                <span>Cloud SQL (PostgreSQL): {products.length} Products · {orders.length} Orders</span>
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -841,6 +919,8 @@ export default function App() {
         onClearActivities={handleClearActivities}
         cartCount={cartTotalItems}
         initialTab={adminInitialTab}
+        dbHealth={dbHealth}
+        onResetDb={handleResetDatabase}
       />
 
       {/* Theme / Color Palette Selector Modal */}

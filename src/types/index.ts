@@ -101,6 +101,7 @@ export interface CustomerReview {
   date: string;
   verified: boolean;
   avatar: string;
+  productName?: string;
 }
 
 export interface SystemActivity {
