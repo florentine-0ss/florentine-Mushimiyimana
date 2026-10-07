@@ -3,6 +3,7 @@
   "appId": "1:359401587069:web:0e34d87d4397a048a30c14",
   "apiKey": "AIzaSyBpxGGR3hbiFJzzlY8AcT1wlfnN3_gJvII",
   "authDomain": "turing-compound-thl8x.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-fofogreengrocerh-55f03a35-fe93-49b7-b308-6db741c4f054",
   "storageBucket": "turing-compound-thl8x.firebasestorage.app",
   "messagingSenderId": "359401587069",
   "measurementId": "",
